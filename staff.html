@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-gray-800 text-white min-h-screen flex flex-col items-center p-4">
+
+    <h1 class="text-xl font-bold mb-4">จุดตัดสิทธิ์ (Staff Only)</h1>
+
+    <div id="reader" style="width: 300px;" class="bg-black rounded-lg overflow-hidden"></div>
+
+    <div id="resultArea" class="hidden mt-6 bg-white text-gray-800 p-6 rounded-lg w-full max-w-sm text-center">
+        <h2 id="userName" class="text-xl font-bold text-blue-600 mb-2">ชื่อผู้ใช้</h2>
+        <p id="userOrg" class="text-gray-500 mb-4">หน่วยงาน</p>
+        
+        <div class="bg-gray-100 p-3 rounded mb-4">
+            <p>สิทธิ์คงเหลือ</p>
+            <p id="quotaCount" class="text-4xl font-bold text-red-600">-</p>
+        </div>
+
+        <button id="btnDeduct" onclick="deductQuota()" class="w-full bg-green-500 text-white p-4 rounded text-xl font-bold shadow-lg hover:bg-green-600">
+            ตัด 1 สิทธิ์
+        </button>
+        
+        <button onclick="resetScanner()" class="mt-3 text-gray-500 underline">ยกเลิก / สแกนใหม่</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        // --- ⚠️ แก้ไข config ตรงนี้ ให้เหมือนไฟล์แรก ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyzAmyPZjrFcdrN-JptAU5feFjf3TeKiE", 
+            authDomain: "myeventsystem-806ac.firebaseapp.com",
+            projectId: "myeventsystem-806ac",
+            storageBucket: "myeventsystem-806ac.firebasestorage.app",
+            messagingSenderId: "63169989258",
+            appId: "1:63169989258:web:6adc6816313a2454acfb73"
+        };
+        // ------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let currentUserId = null;
+        let html5QrcodeScanner;
+
+        // เริ่มต้นตัวสแกน
+        function startScanner() {
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+            html5QrcodeScanner.render(onScanSuccess);
+        }
+        startScanner();
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            // หยุดกล้องชั่วคราวเมื่อเจอ QR
+            html5QrcodeScanner.clear();
+            
+            // ดึงข้อมูลจาก Firebase
+            currentUserId = decodedText;
+            const userRef = doc(db, "users", currentUserId);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const data = userSnap.data();
+                showResult(data);
+            } else {
+                alert("ไม่พบข้อมูลผู้ใช้!");
+                startScanner();
+            }
+        }
+
+        function showResult(data) {
+            document.getElementById('resultArea').classList.remove('hidden');
+            document.getElementById('userName').innerText = data.firstname + " " + data.lastname;
+            document.getElementById('userOrg').innerText = data.organization;
+            document.getElementById('quotaCount').innerText = data.quota;
+
+            const btn = document.getElementById('btnDeduct');
+            if(data.quota <= 0) {
+                btn.disabled = true;
+                btn.innerText = "สิทธิ์หมดแล้ว!";
+                btn.classList.add('bg-gray-400');
+                btn.classList.remove('bg-green-500');
+            } else {
+                btn.disabled = false;
+                btn.innerText = "ยืนยันตัด 1 สิทธิ์";
+                btn.classList.remove('bg-gray-400');
+                btn.classList.add('bg-green-500');
+            }
+        }
+
+        window.deductQuota = async function() {
+            if(!currentUserId) return;
+            
+            try {
+                const userRef = doc(db, "users", currentUserId);
+                // ตัดยอด -1
+                await updateDoc(userRef, {
+                    quota: increment(-1)
+                });
+                
+                alert("ตัดสิทธิ์เรียบร้อย!");
+                resetScanner();
+            } catch (e) {
+                console.error(e);
+                alert("เกิดข้อผิดพลาด");
+            }
+        }
+
+        window.resetScanner = function() {
+            document.getElementById('resultArea').classList.add('hidden');
+            currentUserId = null;
+            startScanner();
+        }
+    </script>
+</body>
+</html>

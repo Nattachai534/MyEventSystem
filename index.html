@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียนเข้าร่วมงานส่งท้ายปีเก่าต้อนรับปีใหม่ 2569 ภารกิจด้านการพยาบาล</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md text-center">
+        <h1 class="text-2xl font-bold mb-4 text-blue-600">ลงทะเบียนเข้าร่วมงานส่งท้ายปีเก่าต้อนรับปีใหม่ 2569 ภารกิจด้านการพยาบาล</h1>
+
+        <div id="registerForm">
+            <input type="text" id="fname" placeholder="ชื่อจริง" class="w-full p-2 mb-3 border rounded">
+            <input type="text" id="lname" placeholder="นามสกุล" class="w-full p-2 mb-3 border rounded">
+            <input type="text" id="org" placeholder="หน่วยงาน" class="w-full p-2 mb-3 border rounded">
+            <button onclick="registerUser()" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 font-bold">
+                ลงทะเบียนรับสิทธิ์
+            </button>
+        </div>
+
+        <div id="qrArea" class="hidden">
+            <p class="text-green-600 font-bold text-lg mb-2">ลงทะเบียนสำเร็จ!</p>
+            <div id="qrcode" class="flex justify-center mb-4"></div>
+            <p class="text-gray-500 text-sm">แคปหน้าจอนี้ไว้เพื่อสแกนเข้างาน</p>
+            <div class="mt-4 p-3 bg-yellow-100 rounded">
+                <p class="font-bold">สิทธิ์คงเหลือ: <span id="quotaDisplay" class="text-red-600 text-xl">6</span> ครั้ง</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        // --- ⚠️ แก้ไข config ตรงนี้ จากขั้นตอนที่ 1 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAyzAmyPZjrFcdrN-JptAU5feFjf3TeKiE", 
+            authDomain: "myeventsystem-806ac.firebaseapp.com",
+            projectId: "myeventsystem-806ac",
+            storageBucket: "myeventsystem-806ac.firebasestorage.app",
+            messagingSenderId: "63169989258",
+            appId: "1:63169989258:web:6adc6816313a2454acfb73"
+        };
+        // ------------------------------------------
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // เช็คว่าเคยลงทะเบียนหรือยัง (Check LocalStorage)
+        const savedId = localStorage.getItem("event_user_id");
+        if (savedId) {
+            showQR(savedId);
+        }
+
+        window.registerUser = async function() {
+            const fname = document.getElementById('fname').value;
+            const lname = document.getElementById('lname').value;
+            const org = document.getElementById('org').value;
+
+            if (!fname || !lname) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+            try {
+                // บันทึกลง Firebase
+                const docRef = await addDoc(collection(db, "users"), {
+                    firstname: fname,
+                    lastname: lname,
+                    organization: org,
+                    quota: 6, // ให้สิทธิ์ 6 ครั้ง
+                    timestamp: new Date()
+                });
+
+                // บันทึก ID ลงเครื่องและแสดง QR
+                localStorage.setItem("event_user_id", docRef.id);
+                showQR(docRef.id);
+
+            } catch (e) {
+                console.error("Error: ", e);
+                alert("เกิดข้อผิดพลาดในการลงทะเบียน");
+            }
+        }
+
+        function showQR(id) {
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('qrArea').classList.remove('hidden');
+
+            // สร้าง QR Code
+            document.getElementById("qrcode").innerHTML = "";
+            new QRCode(document.getElementById("qrcode"), {
+                text: id,
+                width: 200,
+                height: 200
+            });
+
+            // ดึงข้อมูล Quota ล่าสุดมาโชว์แบบ Realtime
+            onSnapshot(doc(db, "users", id), (doc) => {
+                if(doc.exists()) {
+                    document.getElementById("quotaDisplay").innerText = doc.data().quota;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

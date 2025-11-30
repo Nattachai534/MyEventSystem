@@ -99,7 +99,27 @@
         // -------------------
 
         const firebaseConfig = {
-            apiKey: "AIzaSyAyzAmyPZjrFcdrN-JptAU5feFjf3TeKiE", // ใส่ Config เดิมของคุณ
+            apiKey: "// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAyzAmyPZjrFcdrN-JptAU5feFjf3TeKiE",
+  authDomain: "myeventsystem-806ac.firebaseapp.com",
+  projectId: "myeventsystem-806ac",
+  storageBucket: "myeventsystem-806ac.firebasestorage.app",
+  messagingSenderId: "63169989258",
+  appId: "1:63169989258:web:8722667637c75756acfb73",
+  measurementId: "G-1X242R71V7"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);", // ใส่ Config เดิมของคุณ
             authDomain: "myeventsystem-806ac.firebaseapp.com",
             projectId: "myeventsystem-806ac",
             storageBucket: "myeventsystem-806ac.firebasestorage.app",

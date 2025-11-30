@@ -3,37 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Scanner</title>
+    <title>Staff Control Center - รพ.ราชวิถี</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background-color: #fdf2f8; }
+        .tab-active { background-color: #db2777; color: white; }
+        .tab-inactive { background-color: #fce7f3; color: #db2777; }
+    </style>
 </head>
-<body class="bg-gray-800 text-white min-h-screen flex flex-col items-center p-4">
+<body class="min-h-screen flex flex-col">
 
-    <h1 class="text-xl font-bold mb-4">จุดตัดสิทธิ์ (Staff Only)</h1>
+    <div class="sticky top-0 z-50 bg-white shadow-md">
+        <div class="p-3 text-center border-b border-pink-100">
+            <h1 class="text-lg font-bold text-pink-700">Staff Control Center</h1>
+        </div>
+        <div class="flex text-sm font-bold">
+            <button onclick="switchTab('scanner')" id="tab-scanner" class="flex-1 py-3 tab-active transition-colors">
+                <i class="fas fa-qrcode mr-2"></i> สแกนรายคน
+            </button>
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 py-3 tab-inactive transition-colors relative">
+                <i class="fas fa-list mr-2"></i> รายการของขวัญ
+                <span id="pendingCountBadge" class="hidden absolute top-2 right-4 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+            </button>
+        </div>
+    </div>
 
-    <div id="reader" style="width: 300px;" class="bg-black rounded-lg overflow-hidden"></div>
-
-    <div id="resultArea" class="hidden mt-6 bg-white text-gray-800 p-6 rounded-lg w-full max-w-sm text-center">
-        <h2 id="userName" class="text-xl font-bold text-blue-600 mb-2">ชื่อผู้ใช้</h2>
-        <p id="userOrg" class="text-gray-500 mb-4">หน่วยงาน</p>
+    <div id="view-scanner" class="flex-1 flex flex-col items-center p-4">
         
-        <div class="bg-gray-100 p-3 rounded mb-4">
-            <p>สิทธิ์คงเหลือ</p>
-            <p id="quotaCount" class="text-4xl font-bold text-red-600">-</p>
+        <div id="readerWrapper" class="relative w-full max-w-sm mb-4">
+            <div id="reader" class="w-full bg-black rounded-xl overflow-hidden shadow-lg border-4 border-pink-300"></div>
+            <p id="cameraStatus" class="text-center text-xs text-gray-500 mt-2 animate-pulse">กำลังเปิดกล้อง...</p>
         </div>
 
-        <button id="btnDeduct" onclick="deductQuota()" class="w-full bg-green-500 text-white p-4 rounded text-xl font-bold shadow-lg hover:bg-green-600">
-            ตัด 1 สิทธิ์
-        </button>
-        
-        <button onclick="resetScanner()" class="mt-3 text-gray-500 underline">ยกเลิก / สแกนใหม่</button>
+        <div id="resultArea" class="hidden w-full max-w-sm bg-white rounded-xl shadow-xl p-5 border border-pink-200">
+            <div class="flex justify-between items-start border-b pb-3 mb-3">
+                <div>
+                    <h2 id="userName" class="text-xl font-bold text-pink-600">...</h2>
+                    <p id="userOrg" class="text-sm text-gray-500">...</p>
+                </div>
+                <button onclick="resetScanner()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="mb-4 bg-purple-50 p-3 rounded-lg border border-purple-200">
+                <h3 class="text-sm font-bold text-purple-700 mb-2"><i class="fas fa-gift"></i> สถานะของขวัญ</h3>
+                <div id="scanGiftList" class="space-y-2 text-sm">
+                    </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div onclick="deductQuota('food')" class="bg-pink-100 p-2 rounded cursor-pointer active:scale-95 transition">
+                    <div class="text-xs text-pink-800">อาหาร</div>
+                    <div id="sFood" class="font-bold text-pink-600 text-lg">-</div>
+                </div>
+                <div onclick="deductQuota('snack')" class="bg-yellow-100 p-2 rounded cursor-pointer active:scale-95 transition">
+                    <div class="text-xs text-yellow-800">ขนม</div>
+                    <div id="sSnack" class="font-bold text-yellow-600 text-lg">-</div>
+                </div>
+                <div onclick="deductQuota('drink')" class="bg-blue-100 p-2 rounded cursor-pointer active:scale-95 transition">
+                    <div class="text-xs text-blue-800">น้ำ</div>
+                    <div id="sDrink" class="font-bold text-blue-600 text-lg">-</div>
+                </div>
+            </div>
+            
+            <button onclick="resetScanner()" class="w-full mt-5 bg-gray-600 text-white py-2 rounded-lg font-bold text-sm">สแกนคนถัดไป</button>
+        </div>
     </div>
+
+    <div id="view-dashboard" class="hidden flex-1 p-4 max-w-2xl mx-auto w-full">
+        
+        <div class="mb-4">
+            <input type="text" id="searchInput" onkeyup="filterDashboard()" placeholder="🔍 ค้นหาชื่อ หรือ หน่วยงาน..." class="w-full p-3 rounded-lg border border-pink-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-400">
+        </div>
+
+        <div class="flex justify-between items-end mb-2">
+            <h2 class="font-bold text-gray-700">🎁 รายการรอรับของขวัญ</h2>
+            <span class="text-xs text-gray-500">อัปเดตอัตโนมัติ (Real-time)</span>
+        </div>
+
+        <div id="dashboardList" class="space-y-3 pb-20">
+            <div class="text-center py-10 text-gray-400">
+                <i class="fas fa-spinner fa-spin text-2xl"></i><br>กำลังโหลดข้อมูล...
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getFirestore, doc, updateDoc, increment, onSnapshot, arrayUnion, collection, query, where } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-        // --- ⚠️ แก้ไข config ตรงนี้ ให้เหมือนไฟล์แรก ---
+        // --- ⚠️ CONFIG FIREBASE (ใส่ของคุณตรงนี้) ---
         const firebaseConfig = {
             apiKey: "AIzaSyAyzAmyPZjrFcdrN-JptAU5feFjf3TeKiE", 
             authDomain: "myeventsystem-806ac.firebaseapp.com",
@@ -42,82 +106,234 @@
             messagingSenderId: "63169989258",
             appId: "1:63169989258:web:6adc6816313a2454acfb73"
         };
-        // ------------------------------------------
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        let currentUserId = null;
-        let html5QrcodeScanner;
 
-        // เริ่มต้นตัวสแกน
-        function startScanner() {
-            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-            html5QrcodeScanner.render(onScanSuccess);
-        }
-        startScanner();
+        // Global Variables
+        let currentScanUserId = null;
+        let html5QrCode;
+        let unsubscribeScanUser = null;
+        let dashboardData = []; // เก็บข้อมูลเพื่อทำ Search
 
-        async function onScanSuccess(decodedText, decodedResult) {
-            // หยุดกล้องชั่วคราวเมื่อเจอ QR
-            html5QrcodeScanner.clear();
-            
-            // ดึงข้อมูลจาก Firebase
-            currentUserId = decodedText;
-            const userRef = doc(db, "users", currentUserId);
-            const userSnap = await getDoc(userRef);
+        // ================= TAB SWITCHING =================
+        window.switchTab = function(tabName) {
+            const scanView = document.getElementById('view-scanner');
+            const dashView = document.getElementById('view-dashboard');
+            const btnScan = document.getElementById('tab-scanner');
+            const btnDash = document.getElementById('tab-dashboard');
 
-            if (userSnap.exists()) {
-                const data = userSnap.data();
-                showResult(data);
+            if (tabName === 'scanner') {
+                scanView.classList.remove('hidden');
+                dashView.classList.add('hidden');
+                btnScan.className = "flex-1 py-3 tab-active transition-colors";
+                btnDash.className = "flex-1 py-3 tab-inactive transition-colors relative";
+                // Start Camera if not running
+                if(!html5QrCode?.isScanning) startCamera();
             } else {
-                alert("ไม่พบข้อมูลผู้ใช้!");
-                startScanner();
+                scanView.classList.add('hidden');
+                dashView.classList.remove('hidden');
+                btnScan.className = "flex-1 py-3 tab-inactive transition-colors";
+                btnDash.className = "flex-1 py-3 tab-active transition-colors relative";
+                // Stop Camera to save battery
+                if(html5QrCode?.isScanning) html5QrCode.stop();
             }
         }
 
-        function showResult(data) {
+        // ================= LOGIC 1: SCANNER =================
+        function startCamera() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .then(() => document.getElementById("cameraStatus").innerText = "พร้อมสแกน")
+                .catch(() => document.getElementById("cameraStatus").innerText = "กรุณาอนุญาตกล้อง");
+        }
+        
+        // เริ่มต้นเปิดกล้องเลย
+        startCamera();
+
+        function onScanSuccess(decodedText) {
+            html5QrCode.stop();
+            document.getElementById("readerWrapper").classList.add('hidden');
             document.getElementById('resultArea').classList.remove('hidden');
+            
+            currentScanUserId = decodedText;
+            
+            // Listen Realtime (User คนที่ถูกสแกน)
+            if(unsubscribeScanUser) unsubscribeScanUser();
+            unsubscribeScanUser = onSnapshot(doc(db, "users", currentScanUserId), (docSnap) => {
+                if (docSnap.exists()) {
+                    renderScanResult(docSnap.data());
+                } else {
+                    alert("ไม่พบข้อมูลผู้ใช้");
+                    resetScanner();
+                }
+            });
+        }
+
+        function renderScanResult(data) {
             document.getElementById('userName').innerText = data.firstname + " " + data.lastname;
             document.getElementById('userOrg').innerText = data.organization;
-            document.getElementById('quotaCount').innerText = data.quota;
+            document.getElementById('sFood').innerText = data.quota.food;
+            document.getElementById('sSnack').innerText = data.quota.snack;
+            document.getElementById('sDrink').innerText = data.quota.drink;
 
-            const btn = document.getElementById('btnDeduct');
-            if(data.quota <= 0) {
-                btn.disabled = true;
-                btn.innerText = "สิทธิ์หมดแล้ว!";
-                btn.classList.add('bg-gray-400');
-                btn.classList.remove('bg-green-500');
+            // Render Gift List (ในหน้าสแกน)
+            const listDiv = document.getElementById('scanGiftList');
+            listDiv.innerHTML = "";
+            const gifts = data.giftNumbers || [];
+            const claimed = data.giftsClaimed || [];
+
+            if (gifts.length === 0) {
+                listDiv.innerHTML = `<p class="text-gray-400 italic">ยังไม่ได้กดสุ่ม</p>`;
             } else {
-                btn.disabled = false;
-                btn.innerText = "ยืนยันตัด 1 สิทธิ์";
-                btn.classList.remove('bg-gray-400');
-                btn.classList.add('bg-green-500');
-            }
-        }
-
-        window.deductQuota = async function() {
-            if(!currentUserId) return;
-            
-            try {
-                const userRef = doc(db, "users", currentUserId);
-                // ตัดยอด -1
-                await updateDoc(userRef, {
-                    quota: increment(-1)
+                gifts.forEach(num => {
+                    const isClaimed = claimed.includes(num);
+                    if (isClaimed) {
+                        listDiv.innerHTML += `
+                            <div class="flex justify-between items-center bg-green-50 p-2 rounded border border-green-200">
+                                <span class="font-bold text-green-700">#${num}</span>
+                                <span class="text-xs text-green-600 font-bold"><i class="fas fa-check-circle"></i> รับแล้ว</span>
+                            </div>`;
+                    } else {
+                        listDiv.innerHTML += `
+                            <div class="flex justify-between items-center bg-white p-2 rounded border border-purple-200 shadow-sm">
+                                <span class="font-bold text-purple-700 text-lg">#${num}</span>
+                                <button onclick="claimGiftGlobal('${currentScanUserId}', ${num}, '${data.firstname}')" 
+                                    class="bg-purple-600 text-white text-xs px-3 py-1.5 rounded hover:bg-purple-700 font-bold shadow">
+                                    กดจ่ายของ
+                                </button>
+                            </div>`;
+                    }
                 });
-                
-                alert("ตัดสิทธิ์เรียบร้อย!");
-                resetScanner();
-            } catch (e) {
-                console.error(e);
-                alert("เกิดข้อผิดพลาด");
             }
         }
 
         window.resetScanner = function() {
+            if(unsubscribeScanUser) unsubscribeScanUser();
             document.getElementById('resultArea').classList.add('hidden');
-            currentUserId = null;
-            startScanner();
+            document.getElementById('readerWrapper').classList.remove('hidden');
+            startCamera();
         }
+
+        window.deductQuota = async function(type) {
+            if(!currentScanUserId) return;
+            // เช็คค่าหน้าจอแบบง่ายๆ
+            const val = parseInt(document.getElementById(type === 'food' ? 'sFood' : type === 'snack' ? 'sSnack' : 'sDrink').innerText);
+            if(val <= 0) return alert("สิทธิ์หมดแล้ว");
+            
+            try {
+                await updateDoc(doc(db, "users", currentScanUserId), { [`quota.${type}`]: increment(-1) });
+            } catch(e) { console.error(e); }
+        }
+
+
+        // ================= LOGIC 2: DASHBOARD (รวม) =================
+        
+        // ดึงข้อมูลทุกคนที่มีของขวัญ (Realtime)
+        // หมายเหตุ: การใช้ where('giftNumbers', '!=', []) อาจต้องสร้าง index ใน Firebase Console
+        // หาก error index ให้คลิก Link ใน console log หรือใช้ collection ธรรมดาแล้ว filter JS แทน
+        const q = collection(db, "users"); 
+        
+        onSnapshot(q, (snapshot) => {
+            const listContainer = document.getElementById('dashboardList');
+            const badge = document.getElementById('pendingCountBadge');
+            let pendingCount = 0;
+            dashboardData = []; // Reset local data
+
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const gifts = d.giftNumbers || [];
+                const claimed = d.giftsClaimed || [];
+                
+                // หาของขวัญที่ยังไม่ได้ claim
+                const unClaimedGifts = gifts.filter(g => !claimed.includes(g));
+
+                if (unClaimedGifts.length > 0) {
+                    pendingCount += unClaimedGifts.length;
+                    // เก็บข้อมูลไว้ทำ Search
+                    dashboardData.push({
+                        id: doc.id,
+                        name: d.firstname + " " + d.lastname,
+                        org: d.organization,
+                        giftNums: unClaimedGifts
+                    });
+                }
+            });
+
+            // Update Badge
+            badge.innerText = pendingCount;
+            badge.classList.remove('hidden');
+            if(pendingCount === 0) badge.classList.add('hidden');
+
+            // Render
+            renderDashboard();
+        });
+
+        function renderDashboard() {
+            const listContainer = document.getElementById('dashboardList');
+            const filterText = document.getElementById('searchInput').value.toLowerCase();
+            
+            listContainer.innerHTML = "";
+
+            // Filter ตามคำค้นหา
+            const filtered = dashboardData.filter(item => 
+                item.name.toLowerCase().includes(filterText) || 
+                item.org.toLowerCase().includes(filterText) ||
+                item.giftNums.some(num => num.toString().includes(filterText))
+            );
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="text-center text-gray-400 mt-10">ไม่พบรายการค้างรับ</div>`;
+                return;
+            }
+
+            filtered.forEach(user => {
+                user.giftNums.forEach(num => {
+                    listContainer.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-pink-100 flex justify-between items-center transform transition hover:scale-[1.02]">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-purple-100 text-purple-700 font-black px-2 py-0.5 rounded text-sm">#${num}</span>
+                                    <h3 class="font-bold text-gray-800">${user.name}</h3>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1"><i class="fas fa-building"></i> ${user.org}</p>
+                            </div>
+                            <button onclick="claimGiftGlobal('${user.id}', ${num}, '${user.name}')" 
+                                class="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:opacity-90 active:scale-95">
+                                จ่ายของ
+                            </button>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // ฟังก์ชัน Search (แค่เรียก Render ใหม่)
+        window.filterDashboard = function() {
+            renderDashboard();
+        }
+
+        // ================= SHARED FUNCTION: CLAIM GIFT =================
+        // ใช้ร่วมกันทั้งหน้า Scan และ Dashboard
+        window.claimGiftGlobal = async function(userId, giftNum, userName) {
+            // Confirmation Dialog (ป้องกันกดผิด)
+            const isConfirmed = confirm(`⚠️ ยืนยันการจ่ายของขวัญ?\n\nหมายเลข: #${giftNum}\nผู้รับ: ${userName}`);
+            
+            if (!isConfirmed) return;
+
+            try {
+                const userRef = doc(db, "users", userId);
+                await updateDoc(userRef, {
+                    giftsClaimed: arrayUnion(giftNum)
+                });
+                // ไม่ต้อง alert เพราะรายการจะหายไปเองตาม Realtime
+            } catch (e) {
+                console.error(e);
+                alert("เกิดข้อผิดพลาดในการบันทึก");
+            }
+        }
+
     </script>
 </body>
 </html>

@@ -281,5 +281,17 @@
             }
         }
     </script>
+    <button onclick="devReset()" style="position:fixed; bottom:10px; right:10px; background:red; color:white; padding:5px; border-radius:5px; font-size:10px; z-index:9999;">
+    ⚠️ Reset Me
+</button>
+
+<script>
+    function devReset() {
+        if(confirm("ล้างข้อมูลในเครื่องนี้เพื่อลงทะเบียนใหม่?")) {
+            localStorage.removeItem("rajavithi_event_uid"); // ลบ ID ในเครื่อง
+            location.reload(); // รีโหลดหน้าเว็บ
+        }
+    }
+</script>
 </body>
 </html>
